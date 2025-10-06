@@ -6,9 +6,9 @@ class Job(Base):
     __tablename__ = "jobs"
 
     id = Column(Integer, primary_key=True, index=True)
-    title = Column(String, index=True)
-    description = Column(String)
-    owner_id = Column(Integer, ForeignKey("users.id"))
+    title = Column(String(100), index=True, nullable=False)       # max 100 chars
+    description = Column(String(500), nullable=False)             # max 500 chars
+    owner_id = Column(Integer, ForeignKey("users.id"), nullable=False)
 
-    # Relation
-    owner = relationship("User")
+    # Relationship to User
+    owner = relationship("User", back_populates="jobs")

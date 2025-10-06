@@ -7,11 +7,17 @@ from ..services.auth import hash_password
 # Users
 def create_user(db: Session, user: UserCreate):
     hashed_pw = hash_password(user.password)
-    db_user = User(username=user.username, email=user.email, hashed_password=hashed_pw)
+    db_user = User(
+        username=user.username,
+        email=user.email,
+        hashed_password=hashed_pw,
+        role=getattr(user, "role", "jobseeker")
+    )
     db.add(db_user)
     db.commit()
     db.refresh(db_user)
     return db_user
+
 
 def get_user_by_email(db: Session, email: str):
     return db.query(User).filter(User.email == email).first()

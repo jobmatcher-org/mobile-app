@@ -1,8 +1,8 @@
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
-from ..database import get_db
-from ..schemas.job import JobCreate, JobResponse
-from ..services import crud
+from backend.database import get_db
+from backend.schemas.job import JobCreate, JobResponse
+from backend.services import crud
 from typing import List
 
 router = APIRouter()

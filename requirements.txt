@@ -23,3 +23,4 @@ anyio~=4.11.0
 httptools~=0.6.4
 watchfiles~=1.1.0
 annotated-types~=0.7.0
+pymysql
