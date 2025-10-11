@@ -1,38 +1,23 @@
 from fastapi import FastAPI
-from fastapi.middleware.cors import CORSMiddleware
-
-# ✅ Import routers and database
-# If this file is inside backend/, keep imports relative like below:
-from backend.routers import auth, users, jobs
 from backend.database import Base, engine
+from backend.routers import users, jobs, auth
 
-# ✅ Create all tables in database
-print("Creating tables in database...")
+# Create tables
 Base.metadata.create_all(bind=engine)
-print("Tables created successfully.")
 
-# ✅ Initialize FastAPI app
+# Initialize app (only once!)
 app = FastAPI(
-    title="JobMatcher Backend",
-    description="Backend API for Android app and ReactJS web portal",
+    title="Job Matcher API",
+    description="API backend for the Job Matcher platform",
     version="1.0.0"
 )
 
-# ✅ CORS setup (for frontend apps to connect)
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],  # 👈 Change later to specific URLs for better security
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
-
-# ✅ Root endpoint for quick health check
+# Root endpoint
 @app.get("/")
 def root():
-    return {"message": "FastAPI backend is running 🚀"}
+    return {"message": "Backend is running!"}
 
-# ✅ Register routers (API endpoints)
-app.include_router(auth.router, prefix="/auth", tags=["Auth"])
-app.include_router(users.router, prefix="/users", tags=["Users"])
-app.include_router(jobs.router, prefix="/jobs", tags=["Jobs"])
+# Include routers
+app.include_router(users)  # not users.router
+app.include_router(jobs)   # not jobs.router
+app.include_router(auth)   # if you want authentication routes
