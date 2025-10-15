@@ -1,29 +1,26 @@
 from sqlalchemy.orm import Session
 from backend import models, schemas
 
-
 # ---------------------------
 # USERS
 # ---------------------------
 def get_user_by_email(db: Session, email: str):
     return db.query(models.User).filter(models.User.email == email).first()
 
-
-def create_user(db: Session, user: schemas.user.UserCreate):
+def create_user(db: Session, user: schemas.UserCreate):
+    """Assumes password is already hashed"""
     new_user = models.User(
         username=user.username,
         email=user.email,
-        password=user.password  # You can later hash this using passlib
+        password=user.password
     )
     db.add(new_user)
     db.commit()
     db.refresh(new_user)
     return new_user
 
-
 def get_users(db: Session):
     return db.query(models.User).all()
-
 
 # ---------------------------
 # JOBS
@@ -48,7 +45,6 @@ def create_job(db: Session, job: schemas.job.JobCreate):
     db.commit()
     db.refresh(new_job)
     return new_job
-
 
 def get_jobs(db: Session):
     return db.query(models.Job).filter(models.Job.is_active == True).all()

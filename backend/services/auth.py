@@ -1,33 +1,43 @@
+from sqlalchemy.orm import Session
+from backend import models, schemas
 from passlib.context import CryptContext
-from jose import JWTError, jwt
-from datetime import datetime, timedelta
-import os
-import hashlib
-from dotenv import load_dotenv
-
-load_dotenv()
-
-SECRET_KEY = os.getenv("SECRET_KEY", "secret")
-ALGORITHM = "HS256"
-ACCESS_TOKEN_EXPIRE_MINUTES = 30
+from backend.services import crud
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
-def _pre_hash(password: str) -> str:
-    """
-    Pre-hash the password with SHA256 to avoid bcrypt 72-byte limit.
-    Always encode before bcrypt.
-    """
-    return hashlib.sha256(password.encode("utf-8")).hexdigest()
-
+# ---------------------------
+# Password utilities
+# ---------------------------
 def hash_password(password: str) -> str:
-    return pwd_context.hash(_pre_hash(password))
+    return pwd_context.hash(password)
 
 def verify_password(password: str, hashed: str) -> bool:
-    return pwd_context.verify(_pre_hash(password), hashed)
+    return pwd_context.verify(password, hashed)
 
-def create_access_token(data: dict) -> str:
-    to_encode = data.copy()
-    expire = datetime.utcnow() + timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
-    to_encode.update({"exp": expire})
-    return jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
+# ---------------------------
+# User registration
+# ---------------------------
+def register_user(db: Session, user: schemas.user.UserCreate):
+    # Check if email already exists
+    existing = crud.get_user_by_email(db, user.email)
+    if existing:
+        raise ValueError("Email already registered")
+
+    # Hash password
+    user.password = hash_password(user.password)
+
+    # Create user in DB
+    return crud.create_user(db, user)
+
+# ---------------------------
+# User login
+# ---------------------------
+def login_user(db: Session, user: schemas.user.UserCreate):
+    db_user = crud.get_user_by_email(db, user.email)
+    if not db_user:
+        raise ValueError("Invalid credentials")
+
+    if not verify_password(user.password, db_user.password):
+        raise ValueError("Invalid credentials")
+
+    return db_user

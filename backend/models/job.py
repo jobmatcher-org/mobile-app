@@ -46,8 +46,8 @@ class JobApplication(Base):
     id = Column(Integer, primary_key=True, index=True)
     job_id = Column(Integer, ForeignKey("jobs.id"))
     applicant_id = Column(Integer, ForeignKey("applicants.id"))
+    resume_id = Column(Integer, ForeignKey("resumes.id"), nullable=True)
     cover_letter = Column(Text)
-    resume_id = Column(Integer, ForeignKey("resumes.id"))
     bookmarked = Column(Boolean, default=False)
     applied_at = Column(DateTime, default=datetime.utcnow)
     status = Column(String(50), default="applied")
@@ -59,7 +59,7 @@ class JobApplication(Base):
     # Relationships
     job = relationship("Job", back_populates="applications")
     applicant = relationship("Applicant", back_populates="applications")
-    resume = relationship("Resume", back_populates="application")
+    resume = relationship("Resume", back_populates="applications", foreign_keys=[resume_id])
 
 
 class SavedJob(Base):
@@ -82,14 +82,15 @@ class Resume(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     applicant_id = Column(Integer, ForeignKey("applicants.id"))
-    application_id = Column(Integer, ForeignKey("job_applications.id"), nullable=True)
     title = Column(String(100))
     file_url = Column(String(255))
     file_size = Column(Integer)
     is_primary = Column(Boolean, default=False)
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    file_path = Column(String(255), nullable=False)
 
     # Relationships
     applicant = relationship("Applicant", back_populates="resumes")
-    application = relationship("JobApplication", back_populates="resume")
+    applications = relationship("JobApplication", back_populates="resume")
+

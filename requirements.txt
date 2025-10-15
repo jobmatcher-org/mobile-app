@@ -7,7 +7,8 @@ python-jose[cryptography]~=3.5.0
 python-multipart~=0.0.20
 alembic
 psycopg2-binary
-email-validator
+email-validator~=2.3.0
+pdfminer.six==20231228
 
 
 h11~=0.16.0
@@ -26,4 +27,4 @@ httptools~=0.6.4
 watchfiles~=1.1.0
 annotated-types~=0.7.0
 pymysql
-
+wheel~=0.45.1
