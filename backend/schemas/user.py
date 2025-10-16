@@ -15,12 +15,12 @@ class UserCreate(UserBase):
 
 class UserResponse(BaseModel):
     id: int
+    username: str   # use 'username', not 'name'
     email: str
-    name: str
+    phone: Optional[str]
 
-    model_config = {
-        "from_attributes": True
-    }
+    class Config:
+        orm_mode = True
 
 # ------------------------------
 # Session Schemas

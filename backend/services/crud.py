@@ -7,17 +7,17 @@ from backend import models, schemas
 def get_user_by_email(db: Session, email: str):
     return db.query(models.User).filter(models.User.email == email).first()
 
-def create_user(db: Session, user: schemas.UserCreate):
-    """Assumes password is already hashed"""
-    new_user = models.User(
+def create_user(db: Session, user: schemas.user.UserCreate, hashed_pw: str):
+    db_user = models.User(
         username=user.username,
         email=user.email,
-        password=user.password
+        hashed_password=hashed_pw  # ✅ match your DB column name
     )
-    db.add(new_user)
+    db.add(db_user)
     db.commit()
-    db.refresh(new_user)
-    return new_user
+    db.refresh(db_user)
+    return db_user
+
 
 def get_users(db: Session):
     return db.query(models.User).all()

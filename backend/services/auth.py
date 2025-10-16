@@ -23,11 +23,11 @@ def register_user(db: Session, user: schemas.user.UserCreate):
     if existing:
         raise ValueError("Email already registered")
 
-    # Hash password
-    user.password = hash_password(user.password)
+    # Hash the plain password
+    hashed_pw = hash_password(user.password)
 
-    # Create user in DB
-    return crud.create_user(db, user)
+    # Pass the hashed password to CRUD
+    return crud.create_user(db, user, hashed_pw)
 
 # ---------------------------
 # User login
