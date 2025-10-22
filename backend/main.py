@@ -1,6 +1,6 @@
 from fastapi import FastAPI
 from backend.database import Base, engine
-from backend.routers import users, jobs, auth
+from backend.routers import users, jobs, auth, resumes
 
 # Create tables
 Base.metadata.create_all(bind=engine)
@@ -21,3 +21,4 @@ def root():
 app.include_router(users)  # not users.router
 app.include_router(jobs)   # not jobs.router
 app.include_router(auth)   # if you want authentication routes
+app.include_router(resumes)

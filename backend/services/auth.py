@@ -2,6 +2,10 @@ from sqlalchemy.orm import Session
 from backend import models, schemas
 from passlib.context import CryptContext
 from backend.services import crud
+from fastapi import Depends, HTTPException, status
+from sqlalchemy.orm import Session
+from backend.database import get_db
+from backend.models.user import User
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
@@ -41,3 +45,15 @@ def login_user(db: Session, user: schemas.user.UserCreate):
         raise ValueError("Invalid credentials")
 
     return db_user
+def get_current_user(db: Session = Depends(get_db)):
+    """
+    Temporary function to simulate an authenticated user.
+    In real auth, you'll decode a JWT and fetch the actual user.
+    """
+    user = db.query(User).first()
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="No user found in database. Please register one first."
+        )
+    return user

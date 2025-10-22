@@ -93,4 +93,3 @@ class Resume(Base):
     # Relationships
     applicant = relationship("Applicant", back_populates="resumes")
     applications = relationship("JobApplication", back_populates="resume")
-
