@@ -3,7 +3,6 @@ from sqlalchemy.orm import relationship
 from datetime import datetime
 from ..database import Base
 
-
 class User(Base):
     __tablename__ = "users"
 
@@ -66,14 +65,14 @@ class Employer(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     user_id = Column(Integer, ForeignKey("users.id"), unique=True)
-    name = Column(String(100))
+    company_name = Column(String(100))  # renamed from name
     description = Column(Text)
     avatar_url = Column(String(255))
     banner_image_url = Column(String(255))
     organization_type = Column(String(100))
     team_size = Column(String(50))
     year_of_establishment = Column(String(10))
-    website_url = Column(String(255))
+    website = Column(String(255))  # renamed from website_url
     location = Column(String(255))
     deleted_at = Column(DateTime)
     created_at = Column(DateTime, default=datetime.utcnow)
@@ -82,3 +81,4 @@ class Employer(Base):
     # Relationships
     user = relationship("User", back_populates="employer")
     jobs = relationship("Job", back_populates="employer")
+

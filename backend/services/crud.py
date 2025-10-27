@@ -48,3 +48,24 @@ def create_job(db: Session, job: schemas.job.JobCreate):
 
 def get_jobs(db: Session):
     return db.query(models.Job).filter(models.Job.is_active == True).all()
+
+def create_employer(db: Session, employer: schemas.employer.EmployerCreate):
+    db_employer = models.Employer(
+        user_id=employer.user_id,
+        company_name=employer.company_name,
+        website=employer.website_url,  # <- keep Pydantic field name
+        location=employer.location,
+        description=employer.description,
+        avatar_url=employer.avatar_url,
+        banner_image_url=employer.banner_image_url,
+        organization_type=employer.organization_type,
+        team_size=employer.team_size,
+        year_of_establishment=employer.year_of_establishment
+    )
+    db.add(db_employer)
+    db.commit()
+    db.refresh(db_employer)
+    return db_employer
+
+def get_employers(db: Session):
+    return db.query(models.Employer).all()

@@ -8,6 +8,8 @@ from sqlalchemy import (
     DateTime,
     Text
 )
+from sqlalchemy.dialects.mysql import JSON
+
 from sqlalchemy.orm import relationship
 from datetime import datetime
 from ..database import Base
@@ -85,10 +87,18 @@ class Resume(Base):
     title = Column(String(100))
     file_url = Column(String(255))
     file_size = Column(Integer)
-    is_primary = Column(Boolean, default=False)
+    file_path=Column(String(255))
+
+    # New fields
+    parsed_text = Column(Text)  # store full parsed text from the resume
+    skills = Column(JSON)       # store extracted skills (could be JSON or comma-separated)
+    education = Column(JSON)    # extracted education details
+    experience = Column(JSON)   # extracted experience details
+    score = Column(Float)       # AI evaluation score (0–100 or similar)
+    ai_status = Column(String(50), default="pending")  # parsed / scored / failed
+
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
-    file_path = Column(String(255), nullable=False)
 
     # Relationships
     applicant = relationship("Applicant", back_populates="resumes")
