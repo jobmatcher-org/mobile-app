@@ -81,4 +81,3 @@ class Employer(Base):
     # Relationships
     user = relationship("User", back_populates="employer")
     jobs = relationship("Job", back_populates="employer")
-

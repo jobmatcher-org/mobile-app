@@ -38,7 +38,7 @@ def register_user(db: Session, user: schemas.user.UserCreate):
 # ---------------------------
 # User login
 # ---------------------------
-def login_user(db: Session, user: schemas.user.UserCreate):
+def login_user(db: Session, user: schemas.user.UserLogin):
     """Authenticate user and verify password."""
     db_user = crud.get_user_by_email(db, user.email)
     if not db_user or not verify_password(user.password, db_user.hashed_password):

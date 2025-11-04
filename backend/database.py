@@ -7,7 +7,7 @@ from dotenv import load_dotenv
 # Load environment variables from .env file
 load_dotenv()
 
-# Example .env content:
+# Example .env  content:
 # DATABASE_URL=mysql+pymysql://root:password@localhost/jobmatcher
 
 DATABASE_URL = os.getenv("DATABASE_URL", "mysql+pymysql://root:@localhost/jobmatcher")

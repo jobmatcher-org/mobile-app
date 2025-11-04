@@ -9,8 +9,8 @@ alembic
 psycopg2-binary
 email-validator~=2.3.0
 pdfminer.six==20231228
-
-
+openai
+numpy
 h11~=0.16.0
 pip~=25.2
 cryptography~=46.0.1
@@ -28,3 +28,11 @@ watchfiles~=1.1.0
 annotated-types~=0.7.0
 pymysql
 wheel~=0.45.1
+
+# Resume parsing dependencies
+pyresparser
+spacy
+nltk
+
+# After installing spacy, run the following separately:
+# python -m spacy download en_core_web_sm

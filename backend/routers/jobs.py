@@ -1,60 +1,59 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Body
 from sqlalchemy.orm import Session
 from typing import List
 from backend.database import get_db
-from backend.schemas.job import JobCreate, JobResponse
+from backend.schemas.job import JobCreate, JobResponse, JobApplicationCreate
+from backend.models import Job, JobApplication, SavedJob, Resume, Applicant
 from backend.services import crud
-from backend.models import job as models  # ✅ Import your Job, Applicant, Resume, JobApplication models
 
 router = APIRouter(prefix="/jobs", tags=["Jobs"])
 
-
+# -----------------------------
+# Create a new job
+# -----------------------------
 @router.post("/", response_model=JobResponse)
 def create_job(job: JobCreate, db: Session = Depends(get_db)):
-    """
-    Create a new job post by an employer.
-    """
     created_job = crud.create_job(db=db, job=job)
     if not created_job:
         raise HTTPException(status_code=400, detail="Failed to create job")
     return created_job
 
-
+# -----------------------------
+# Get all active jobs
+# -----------------------------
 @router.get("/", response_model=List[JobResponse])
 def get_jobs(db: Session = Depends(get_db)):
-    """
-    Get all active job posts.
-    """
     return crud.get_jobs(db)
 
-
-@router.post("/apply/{job_id}")
+# -----------------------------
+# Apply to a job using JSON body
+# -----------------------------
+@router.post("/apply")
 def apply_to_job(
-        job_id: int,
-        applicant_id: int,
-        resume_id: int,
+        body: JobApplicationCreate = Body(...),
         db: Session = Depends(get_db)
 ):
-    """
-    Apply to a specific job with an existing resume.
-    """
-    # Verify job
-    job = db.query(models.Job).filter(models.Job.id == job_id).first()
+    job_id = body.job_id
+    applicant_id = body.applicant_id
+    resume_id = body.resume_id
+
+    # Verify job exists
+    job = db.query(Job).filter(Job.id == job_id).first()
     if not job:
         raise HTTPException(status_code=404, detail="Job not found")
 
-    # Verify applicant
-    applicant = db.query(models.Applicant).filter(models.Applicant.id == applicant_id).first()
+    # Verify applicant exists
+    applicant = db.query(Applicant).filter(Applicant.id == applicant_id).first()
     if not applicant:
         raise HTTPException(status_code=404, detail="Applicant not found")
 
-    # Verify resume
-    resume = db.query(models.Resume).filter(models.Resume.id == resume_id).first()
+    # Verify resume exists
+    resume = db.query(Resume).filter(Resume.id == resume_id).first()
     if not resume:
         raise HTTPException(status_code=404, detail="Resume not found")
 
-    # Create application
-    job_application = models.JobApplication(
+    # Create job application
+    job_application = JobApplication(
         job_id=job_id,
         applicant_id=applicant_id,
         resume_id=resume_id,

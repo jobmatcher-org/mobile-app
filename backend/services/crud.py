@@ -1,10 +1,12 @@
-from sqlalchemy.orm import Session
+from pydantic import EmailStr
 from backend import models, schemas
-
+from sqlalchemy.orm import Session
+from backend.models.news import NewsItem
+from backend.schemas.news import NewsCreate
 # ---------------------------
 # USERS
 # ---------------------------
-def get_user_by_email(db: Session, email: str):
+def get_user_by_email(db: Session, email: EmailStr):
     return db.query(models.User).filter(models.User.email == email).first()
 
 def create_user(db: Session, user: schemas.user.UserCreate, hashed_pw: str):
@@ -69,3 +71,13 @@ def create_employer(db: Session, employer: schemas.employer.EmployerCreate):
 
 def get_employers(db: Session):
     return db.query(models.Employer).all()
+
+def get_all_news(db: Session, skip: int = 0, limit: int = 20):
+    return db.query(NewsItem).offset(skip).limit(limit).all()
+
+def create_news(db: Session, news: NewsCreate):
+    db_news = NewsItem(**news.dict())
+    db.add(db_news)
+    db.commit()
+    db.refresh(db_news)
+    return db_news

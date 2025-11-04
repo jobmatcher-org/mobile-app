@@ -16,3 +16,7 @@ class UserResponse(UserBase):
     updated_at: datetime
 
     model_config = {"from_attributes": True}
+
+class UserLogin(BaseModel):
+    email: EmailStr
+    password: str
