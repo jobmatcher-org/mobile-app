@@ -1,7 +1,6 @@
 import subprocess
 from fastapi import FastAPI
 from backend.database import Base, engine
-from backend.routers.users import router as users_router
 from backend.routers.jobs import router as jobs_router
 from backend.routers.auth import router as auth_router
 from backend.routers.resume import router as resumes_router
@@ -34,7 +33,6 @@ def root():
 #        print(f"❌ Migration failed: {e}")
 
 # Include routers
-app.include_router(users_router)
 app.include_router(jobs_router)
 app.include_router(auth_router)
 app.include_router(resumes_router)

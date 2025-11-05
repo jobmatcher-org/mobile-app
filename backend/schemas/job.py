@@ -1,7 +1,6 @@
-from pydantic import BaseModel
-from typing import Optional
+from typing import Optional, List
 from datetime import datetime
-
+from pydantic import BaseModel
 # ------------------------------
 # Job Schemas
 # ------------------------------
@@ -90,6 +89,12 @@ class ResumeResponse(ResumeBase):
     id: int
     applicant_id: int
     application_id: Optional[int]
+    parsed_text: Optional[str] = None
+    skills: Optional[List[str]] = []
+    education: Optional[List[str]] = []
+    experience: Optional[List[str]] = []
+    score: Optional[float] = 0.0
+    ai_status: Optional[str] = "pending"
     created_at: datetime
     updated_at: datetime
 
