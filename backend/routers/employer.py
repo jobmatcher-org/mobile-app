@@ -11,7 +11,7 @@ router = APIRouter(prefix="/employers", tags=["Employers"])
 @router.post("/", response_model=EmployerResponse)
 def create_employer(employer: EmployerCreate, db: Session = Depends(get_db)):
     """
-    Create a new employer profile (linked to an existing user).
+    CreAate a new employer profile (linked to an existing user).
     """
     created_employer = crud.create_employer(db=db, employer=employer)
     if not created_employer:

@@ -1,6 +1,7 @@
 from typing import Optional, List
 from datetime import datetime
 from pydantic import BaseModel
+
 # ------------------------------
 # Job Schemas
 # ------------------------------
@@ -17,9 +18,10 @@ class JobBase(BaseModel):
     experience: Optional[str] = None
     education: Optional[str] = None
     is_active: Optional[bool] = True
+    required_skills: Optional[List[str]] = []
 
 class JobCreate(JobBase):
-    employer_id: int
+    pass
 
 class JobResponse(JobBase):
     id: int
@@ -79,20 +81,17 @@ class ResumeBase(BaseModel):
     title: str
     file_url: str
     file_size: Optional[int] = None
-    is_primary: Optional[bool] = False
-
-class ResumeCreate(ResumeBase):
-    applicant_id: int
-    application_id: Optional[int] = None
-
-class ResumeResponse(ResumeBase):
-    id: int
-    applicant_id: int
-    application_id: Optional[int]
     parsed_text: Optional[str] = None
     skills: Optional[List[str]] = []
     education: Optional[List[str]] = []
     experience: Optional[List[str]] = []
+
+class ResumeCreate(ResumeBase):
+    applicant_id: int
+
+class ResumeResponse(ResumeBase):
+    id: int
+    applicant_id: int
     score: Optional[float] = 0.0
     ai_status: Optional[str] = "pending"
     created_at: datetime

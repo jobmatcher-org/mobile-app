@@ -1,8 +1,14 @@
-# backend/routers/__init__.py
-from .auth import router as auth
-from .jobs import router as jobs
-from .resume import router as resumes
-from .employer import router as employer
-from .news import router as news
-from .test_news import router as test_news
-
+from .auth import router as auth_router
+from .employer import router as employer_router
+from .jobs import router as jobs_router
+from .resume import router as resume_router
+from .news import router as news_router
+from .resume_score import router as resume_score_router
+routers = [
+    auth_router,
+    employer_router,
+    jobs_router,
+    resume_router,
+    news_router,
+    resume_score_router,
+]

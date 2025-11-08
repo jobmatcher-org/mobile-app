@@ -1,16 +1,30 @@
 from sqlalchemy.orm import Session
 from fastapi import Depends, HTTPException, status
 from passlib.context import CryptContext
-
 from backend import models, schemas
 from backend.services import crud
 from backend.database import get_db
 from backend.models.user import User
-
+from datetime import datetime, timedelta
+from jose import jwt
 # ---------------------------
 # Password utilities
 # ---------------------------
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+
+
+
+SECRET_KEY = "your_secret_key_here"
+ALGORITHM = "HS256"
+ACCESS_TOKEN_EXPIRE_MINUTES = 60
+
+def create_access_token(data: dict):
+    to_encode = data.copy()
+    expire = datetime.utcnow() + timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
+    to_encode.update({"exp": expire})
+    encoded_jwt = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
+    return encoded_jwt
+
 
 def hash_password(password: str) -> str:
     """Hash plain password."""

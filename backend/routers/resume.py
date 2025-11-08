@@ -1,13 +1,15 @@
 from fastapi import APIRouter, UploadFile, File, Form, Depends, HTTPException, status
 from sqlalchemy.orm import Session
-import shutil, os, json
+import shutil, os
 from pdfminer.high_level import extract_text
 from pdfminer.pdfparser import PDFSyntaxError
-from backend.database import get_db
-from backend.models.user import Applicant, User
-from backend.models.job import Resume
-from backend.services.auth import get_current_user
 from sqlalchemy.exc import SQLAlchemyError
+
+from backend.database import get_db
+from backend.models.user import User
+from backend.models.applicant import Applicant
+from backend.models.resume import Resume
+from backend.services.auth import get_current_user
 from backend.ai.resume_parser import parse_resume, score_resume
 
 router = APIRouter(
@@ -18,26 +20,7 @@ router = APIRouter(
 UPLOAD_DIR = "backend/uploads/resumes"
 os.makedirs(UPLOAD_DIR, exist_ok=True)
 
-# ---------------------------
-# Helper: Get or create applicant
-# ---------------------------
-def get_or_create_applicant(db: Session, user_id: int):
-    applicant = db.query(Applicant).filter(Applicant.user_id == user_id).first()
-    if applicant:
-        return applicant
-    try:
-        applicant = Applicant(user_id=user_id)
-        db.add(applicant)
-        db.commit()
-        db.refresh(applicant)
-        return applicant
-    except SQLAlchemyError as e:
-        db.rollback()
-        raise HTTPException(status_code=500, detail=f"Database error: {str(e)}")
 
-# ---------------------------
-# Main: Upload Resume
-# ---------------------------
 @router.post("/upload", status_code=status.HTTP_201_CREATED)
 async def upload_resume(
         file: UploadFile = File(...),
@@ -45,60 +28,62 @@ async def upload_resume(
         db: Session = Depends(get_db),
         current_user: User = Depends(get_current_user)
 ):
-    # 1️⃣ Validate file extension
+    user = db.query(User).filter(User.id == current_user.id).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    # 1) Validate file extension
     allowed_extensions = [".pdf", ".docx"]
     ext = os.path.splitext(file.filename)[1].lower()
     if ext not in allowed_extensions:
         raise HTTPException(status_code=400, detail=f"Invalid file type: {ext}")
 
-    # 2️⃣ Save uploaded file
+    # 2) Save uploaded file
     backend_file_path = os.path.join(UPLOAD_DIR, file.filename)
     try:
         with open(backend_file_path, "wb") as buffer:
             shutil.copyfileobj(file.file, buffer)
-    except OSError as e:
-        raise HTTPException(status_code=500, detail=f"File save failed: {str(e)}")
+    except:
+        raise HTTPException(status_code=500, detail="Failed to save file")
 
-    # 3️⃣ Extract text preview for frontend display
+    # 3) Extract preview text (best effort)
     try:
         extracted_text = extract_text(backend_file_path)
-    except PDFSyntaxError:
-        extracted_text = "⚠️ Could not read PDF (corrupted or encrypted)."
-    except Exception as e:
-        extracted_text = f"⚠️ Text extraction failed: {str(e)}"
+    except:
+        extracted_text = "⚠️ Preview unavailable"
 
-    # 4️⃣ Get or create applicant
-    applicant = get_or_create_applicant(db, current_user.id)
-
-    # 5️⃣ Parse resume
+    # 4) Parse resume using your AI parser
     parsed_data = parse_resume(backend_file_path) or {}
     parsed_text = parsed_data.get("text") or ""
 
-    # 6️⃣ Score resume
+    skills = parsed_data.get("skills") or []
+    education = parsed_data.get("education") or []
+    experience = parsed_data.get("experience") or []
+
+    # 6) Update USER profile fields (not applicant)
     try:
-        ai_score = float(score_resume(parsed_data, job_description)) if job_description else 0.0
-    except Exception as e:
-        ai_score = 0.0
-        print(f"⚠️ AI scoring failed: {e}")
+        user.biography = parsed_data.get("biography") or user.biography
+        user.experience = parsed_data.get("experience_summary") or user.experience
+        user.education = parsed_data.get("education_summary") or user.education
 
-    # 7️⃣ Prepare JSON fields for DB
-    skills = json.dumps(parsed_data.get("skills") or [])
-    education = json.dumps(parsed_data.get("education") or [])
-    experience = json.dumps(parsed_data.get("experience") or [])
+        db.commit()
+        db.refresh(user)
+    except SQLAlchemyError as e:
+        db.rollback()
+        raise HTTPException(status_code=500, detail=f"Failed to update user profile: {str(e)}")
 
-    # 8️⃣ Create Resume record and commit
+    # 7) Save Resume linked to USER
     try:
         new_resume = Resume(
-            applicant_id=applicant.id,
+            user_id=user.id,
             title=file.filename,
             file_url=f"/uploads/resumes/{file.filename}",
-            file_size=os.path.getsize(backend_file_path),
             file_path=backend_file_path,
+            file_size=os.path.getsize(backend_file_path),
             parsed_text=parsed_text,
             skills=skills,
             education=education,
             experience=experience,
-            score=ai_score,
             ai_status="parsed"
         )
         db.add(new_resume)
@@ -108,21 +93,13 @@ async def upload_resume(
         db.rollback()
         raise HTTPException(status_code=500, detail=f"Failed to save resume: {str(e)}")
 
-    # 9️⃣ Return all parsed fields in response
     return {
         "message": "✅ Resume uploaded and parsed successfully!",
         "resume_id": new_resume.id,
         "title": new_resume.title,
-        "file_url": new_resume.file_url,
-        "file_size": new_resume.file_size,
-        "file_path": new_resume.file_path,
-        "parsed_text": new_resume.parsed_text,
-        "skills": json.loads(new_resume.skills),
-        "education": json.loads(new_resume.education),
-        "experience": json.loads(new_resume.experience),
-        "score": new_resume.score,
-        "ai_status": new_resume.ai_status,
-        "created_at": new_resume.created_at,
-        "updated_at": new_resume.updated_at,
+        "skills": new_resume.skills,
+        "education": new_resume.education,
+        "experience": new_resume.experience,
         "parsed_preview": extracted_text[:300]
     }
+

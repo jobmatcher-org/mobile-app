@@ -1,19 +1,7 @@
-from sqlalchemy import (
-    Column,
-    Integer,
-    String,
-    ForeignKey,
-    Float,
-    Boolean,
-    DateTime,
-    Text
-)
-from sqlalchemy.dialects.mysql import JSON
-
+from sqlalchemy import Column, Integer, String, Float, Boolean, Text, DateTime, ForeignKey
 from sqlalchemy.orm import relationship
 from datetime import datetime
 from ..database import Base
-
 
 class Job(Base):
     __tablename__ = "jobs"
@@ -35,12 +23,14 @@ class Job(Base):
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     employer_id = Column(Integer, ForeignKey("employers.id"), nullable=False)
+    required_skills = Column(Text, nullable=True)  # stored as JSON string
+
 
     # Relationships
     employer = relationship("Employer", back_populates="jobs")
     applications = relationship("JobApplication", back_populates="job")
     saved_jobs = relationship("SavedJob", back_populates="job")
-
+    resume_scores = relationship("ResumeScore", back_populates="job")
 
 class JobApplication(Base):
     __tablename__ = "job_applications"
@@ -57,11 +47,10 @@ class JobApplication(Base):
     deleted_at = Column(DateTime)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     created_at = Column(DateTime, default=datetime.utcnow)
-
     # Relationships
     job = relationship("Job", back_populates="applications")
     applicant = relationship("Applicant", back_populates="applications")
-    resume = relationship("Resume", back_populates="applications", foreign_keys=[resume_id])
+    resume = relationship("Resume", back_populates="applications")
 
 
 class SavedJob(Base):
@@ -77,29 +66,3 @@ class SavedJob(Base):
     # Relationships
     job = relationship("Job", back_populates="saved_jobs")
     applicant = relationship("Applicant", back_populates="saved_jobs")
-
-
-class Resume(Base):
-    __tablename__ = "resumes"
-
-    id = Column(Integer, primary_key=True, index=True)
-    applicant_id = Column(Integer, ForeignKey("applicants.id"))
-    title = Column(String(100))
-    file_url = Column(String(255))
-    file_size = Column(Integer)
-    file_path=Column(String(255))
-
-    # New fields
-    parsed_text = Column(Text)  # store full parsed text from the resume
-    skills = Column(JSON)       # store extracted skills (could be JSON or comma-separated)
-    education = Column(JSON)    # extracted education details
-    experience = Column(JSON)   # extracted experience details
-    score = Column(Float)       # AI evaluation score (0–100 or similar)
-    ai_status = Column(String(50), default="pending")  # parsed / scored / failed
-
-    created_at = Column(DateTime, default=datetime.utcnow)
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
-
-    # Relationships
-    applicant = relationship("Applicant", back_populates="resumes")
-    applications = relationship("JobApplication", back_populates="resume")

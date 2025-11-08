@@ -1,8 +1,9 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from backend.database import get_db
-from backend.schemas.user import UserCreate,UserLogin, UserResponse
+from backend.schemas.user import UserCreate, UserLogin, UserResponse
 from backend.services import auth
+from backend.services.auth import create_access_token  # make sure you have this function
 
 router = APIRouter(prefix="/auth", tags=["Auth"])
 
@@ -14,10 +15,23 @@ def register_user_route(user: UserCreate, db: Session = Depends(get_db)):
         raise HTTPException(status_code=409, detail=str(e))
 
 
-
-@router.post("/login", response_model=UserResponse)
+@router.post("/login")
 def login_user_route(user: UserLogin, db: Session = Depends(get_db)):
+    """
+    Login a user and return access token
+    """
     try:
-        return auth.login_user(db, user)
+        db_user = auth.login_user(db, user)  # should verify username/email + password
+        if not db_user:
+            raise HTTPException(status_code=401, detail="Invalid credentials")
+
+        # Create JWT token
+        access_token = create_access_token(data={"sub": db_user.username})
+
+        return {
+            "access_token": access_token,
+            "token_type": "bearer",
+            "user": UserResponse.from_orm(db_user)  # optional: return user info too
+        }
     except ValueError as e:
         raise HTTPException(status_code=401, detail=str(e))
