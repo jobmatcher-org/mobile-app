@@ -31,6 +31,9 @@ class JobResponse(JobBase):
 
     model_config = {"from_attributes": True}
 
+# class JobCreate(JobBase):
+#     pass
+
 # ------------------------------
 # Job Application Schemas
 # ------------------------------

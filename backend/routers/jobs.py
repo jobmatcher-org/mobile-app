@@ -15,13 +15,32 @@ router = APIRouter(prefix="/jobs", tags=["Jobs"])
 # GET all jobs
 # -----------------------
 @router.get("/", response_model=List[JobResponse])
-def get_jobs(
-        db: Session = Depends(get_db),
-        current_user=Depends(get_current_user)
-):
+def get_jobs(db: Session = Depends(get_db), current_user=Depends(get_current_user)):
     jobs = db.query(Job).filter(Job.is_active == True).all()
-    return jobs
 
+    response = []
+    for job in jobs:
+        response.append(JobResponse(
+            id=job.id,
+            employer_id=job.employer_id,
+            title=job.title,
+            description=job.description,
+            tags=job.tags,
+            min_salary=job.min_salary,
+            max_salary=job.max_salary,
+            salary_currency=job.salary_currency,
+            salary_period=job.salary_period,
+            job_types=job.job_types,
+            job_level=job.job_level,
+            experience=job.experience,
+            education=job.education,
+            is_active=job.is_active,
+            required_skills=json.loads(job.required_skills or "[]"),  # ✅ convert here
+            created_at=job.created_at,
+            updated_at=job.updated_at
+        ))
+
+    return response
 
 # -----------------------
 # POST a new job (Employer only)
@@ -32,7 +51,6 @@ def create_job(
         db: Session = Depends(get_db),
         current_user=Depends(get_current_user)
 ):
-    # Only employer users can create jobs
     employer = db.query(Employer).filter(Employer.user_id == current_user.id).first()
     if not employer:
         raise HTTPException(status_code=403, detail="Only employers can create jobs.")
@@ -68,13 +86,13 @@ def search_jobs(
         db: Session = Depends(get_db),
         current_user=Depends(get_current_user)
 ):
-    # Get user's latest resume
     resume = (
         db.query(Resume)
         .filter(Resume.user_id == current_user.id)
         .order_by(Resume.created_at.desc())
         .first()
     )
+
     if not resume:
         raise HTTPException(status_code=400, detail="Upload a resume first to enable job recommendations.")
 
@@ -105,6 +123,7 @@ def search_jobs(
 
     scored_jobs.sort(key=lambda x: x["score"], reverse=True)
 
+    # Return clean response with safe list fields
     return [
         {
             "id": item["job"].id,

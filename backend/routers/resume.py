@@ -2,12 +2,10 @@ from fastapi import APIRouter, UploadFile, File, Form, Depends, HTTPException, s
 from sqlalchemy.orm import Session
 import shutil, os
 from pdfminer.high_level import extract_text
-from pdfminer.pdfparser import PDFSyntaxError
 from sqlalchemy.exc import SQLAlchemyError
 
 from backend.database import get_db
 from backend.models.user import User
-from backend.models.applicant import Applicant
 from backend.models.resume import Resume
 from backend.services.auth import get_current_user
 from backend.ai.resume_parser import parse_resume, score_resume
@@ -16,6 +14,45 @@ router = APIRouter(
     prefix="/resumes",
     tags=["Resumes"]
 )
+
+def sanitize_obj(obj):
+    """
+    Recursively sanitizes any object so FastAPI can JSON encode it safely.
+    Removes non-UTF8 characters, converts bytes → string, lists → safe lists, etc.
+    """
+
+    if obj is None:
+        return None
+
+    # If bytes → try decode, else convert to safe ascii
+    if isinstance(obj, bytes):
+        try:
+            return obj.decode("utf-8", errors="ignore")
+        except:
+            return obj.decode("latin-1", errors="ignore")
+
+    # If string → clean unsafe bytes
+    if isinstance(obj, str):
+        return obj.encode("utf-8", "ignore").decode("utf-8", "ignore")
+
+    # If list → sanitize all items
+    if isinstance(obj, list):
+        return [sanitize_obj(i) for i in obj]
+
+    # If dict → sanitize keys + values
+    if isinstance(obj, dict):
+        return {sanitize_obj(k): sanitize_obj(v) for k, v in obj.items()}
+
+    # Numbers / bool / None → safe
+    if isinstance(obj, (int, float, bool)):
+        return obj
+
+    # For any unknown object (SQLAlchemy, custom classes, etc.)
+    try:
+        return str(obj)
+    except:
+        return None
+
 
 UPLOAD_DIR = "backend/uploads/resumes"
 os.makedirs(UPLOAD_DIR, exist_ok=True)
@@ -28,51 +65,56 @@ async def upload_resume(
         db: Session = Depends(get_db),
         current_user: User = Depends(get_current_user)
 ):
+    # verify user
     user = db.query(User).filter(User.id == current_user.id).first()
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
 
-    # 1) Validate file extension
+    # validate extension
     allowed_extensions = [".pdf", ".docx"]
     ext = os.path.splitext(file.filename)[1].lower()
     if ext not in allowed_extensions:
         raise HTTPException(status_code=400, detail=f"Invalid file type: {ext}")
 
-    # 2) Save uploaded file
+    # save file safely
     backend_file_path = os.path.join(UPLOAD_DIR, file.filename)
     try:
         with open(backend_file_path, "wb") as buffer:
             shutil.copyfileobj(file.file, buffer)
-    except:
-        raise HTTPException(status_code=500, detail="Failed to save file")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to save file: {str(e)}")
 
-    # 3) Extract preview text (best effort)
+    # extract preview text (use same extractor you have)
     try:
         extracted_text = extract_text(backend_file_path)
-    except:
+    except Exception:
         extracted_text = "⚠️ Preview unavailable"
 
-    # 4) Parse resume using your AI parser
-    parsed_data = parse_resume(backend_file_path) or {}
-    parsed_text = parsed_data.get("text") or ""
+    # sanitize extracted_text before returning or passing to score
+    extracted_text = sanitize_obj(extracted_text)
 
+    # parse resume (parser already returns sanitized dict)
+    parsed_data = parse_resume(backend_file_path) or {}
+    # ensure parsed_data is sanitized (double-safety)
+    parsed_data = sanitize_obj(parsed_data)
+
+    parsed_text = parsed_data.get("text") or ""
     skills = parsed_data.get("skills") or []
     education = parsed_data.get("education") or []
     experience = parsed_data.get("experience") or []
 
-    # 6) Update USER profile fields (not applicant)
+    # update profile fields safely (strings are sanitized)
     try:
         user.biography = parsed_data.get("biography") or user.biography
         user.experience = parsed_data.get("experience_summary") or user.experience
         user.education = parsed_data.get("education_summary") or user.education
-
         db.commit()
         db.refresh(user)
     except SQLAlchemyError as e:
         db.rollback()
         raise HTTPException(status_code=500, detail=f"Failed to update user profile: {str(e)}")
 
-    # 7) Save Resume linked to USER
+    # save resume object (DB model columns accept strings/lists — ensure your model types accept lists)
     try:
         new_resume = Resume(
             user_id=user.id,
@@ -93,6 +135,7 @@ async def upload_resume(
         db.rollback()
         raise HTTPException(status_code=500, detail=f"Failed to save resume: {str(e)}")
 
+    # return only primitives (strings, lists) — everything sanitized above
     return {
         "message": "✅ Resume uploaded and parsed successfully!",
         "resume_id": new_resume.id,
@@ -103,3 +146,28 @@ async def upload_resume(
         "parsed_preview": extracted_text[:300]
     }
 
+
+@router.get("/me")
+def get_my_resume(
+        db: Session = Depends(get_db),
+        current_user: User = Depends(get_current_user)
+):
+    resume = (
+        db.query(Resume)
+        .filter(Resume.user_id == current_user.id)
+        .order_by(Resume.created_at.desc())
+        .first()
+    )
+
+    if not resume:
+        return {"resume": None}
+
+    return {
+        "resume_id": resume.id,
+        "title": resume.title,
+        "skills": resume.skills,
+        "education": resume.education,
+        "experience": resume.experience,
+        "parsed_preview": resume.parsed_text[:300] if resume.parsed_text else None,
+        "file_url": resume.file_url,
+    }

@@ -17,21 +17,17 @@ def register_user_route(user: UserCreate, db: Session = Depends(get_db)):
 
 @router.post("/login")
 def login_user_route(user: UserLogin, db: Session = Depends(get_db)):
-    """
-    Login a user and return access token
-    """
-    try:
-        db_user = auth.login_user(db, user)  # should verify username/email + password
-        if not db_user:
-            raise HTTPException(status_code=401, detail="Invalid credentials")
+    # ✅ Verify credentials using your existing auth logic
+    db_user = auth.login_user(db, user)
+    if not db_user:
+        raise HTTPException(status_code=401, detail="Invalid credentials")
 
-        # Create JWT token
-        access_token = create_access_token(data={"sub": db_user.username})
+    # ✅ Create JWT token containing user_id (required by get_current_user)
+    access_token = create_access_token(data={"user_id": db_user.id})
 
-        return {
-            "access_token": access_token,
-            "token_type": "bearer",
-            "user": UserResponse.from_orm(db_user)  # optional: return user info too
-        }
-    except ValueError as e:
-        raise HTTPException(status_code=401, detail=str(e))
+    # ✅ Return token + user info
+    return {
+        "access_token": access_token,
+        "token_type": "bearer",
+        "user": UserResponse.from_orm(db_user)
+    }

@@ -2,6 +2,7 @@ from sqlalchemy import Column, Integer, String, Float, Boolean, Text, DateTime, 
 from sqlalchemy.orm import relationship
 from datetime import datetime
 from ..database import Base
+from sqlalchemy.dialects.mysql import JSON
 
 class Job(Base):
     __tablename__ = "jobs"

@@ -6,7 +6,9 @@ from backend.services import crud
 from backend.database import get_db
 from backend.models.user import User
 from datetime import datetime, timedelta
-from jose import jwt
+from fastapi.security import OAuth2PasswordBearer
+from jose import JWTError, jwt
+
 # ---------------------------
 # Password utilities
 # ---------------------------
@@ -67,15 +69,35 @@ def login_user(db: Session, user: schemas.user.UserLogin):
 # ---------------------------
 # Temporary current user
 # ---------------------------
-def get_current_user(db: Session = Depends(get_db)):
-    """
-    Temporary function to simulate an authenticated user.
-    In real auth, you'd decode a JWT and fetch the actual user.
-    """
-    user = db.query(User).first()
+
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/auth/login")
+
+def get_current_user(
+        token: str = Depends(oauth2_scheme),
+        db: Session = Depends(get_db)
+):
+    try:
+        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        user_id: int = payload.get("user_id")
+
+        if user_id is None:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Invalid authentication token"
+            )
+
+    except JWTError:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid or expired token"
+        )
+
+    user = db.query(User).filter(User.id == user_id).first()
+
     if not user:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail="No user found in database. Please register one first."
+            detail="User not found"
         )
+
     return user
